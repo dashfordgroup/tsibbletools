@@ -1,2 +1,2 @@
 # tsibbletools
-A set of useful functions for use with tsibble objects
+We love [tidyverts](https://github.com/tidyverts) and so are you! These are tools that we use with our tsibbles regularly.
