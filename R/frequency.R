@@ -32,7 +32,7 @@ change_frequency <-
             tsbl <- tsibble::index_by(tsbl, index_new = ~ lubridate::year(.))
         }
 
-        dplyr::rename(dplyr::summarise_all(tsbl, {{ .f }}), !!(index_name) := index_new)
+        dplyr::rename(dplyr::summarise_all(tsbl, {{ .f }}), tsibble::group_by_key(!!(index_name) := index_new))
 
         # tsbl %>%
         #     dplyr::summarise_all({{ .f }}) %>%
