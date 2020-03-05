@@ -1,7 +1,7 @@
 #' Change tsibble frequency
 #'
 #' @param tsbl tsibble
-#' @param frequency frequency to apply to tsibble
+#' @param freq frequency to apply to tsibble
 #' @param .f summary function
 #'
 #' @return tsibble
@@ -32,9 +32,11 @@ change_frequency <-
             tsbl <- tsibble::index_by(tsbl, index_new = ~ lubridate::year(.))
         }
 
-        tsbl %>%
-            dplyr::summarise_all({{ .f }}) %>%
-            dplyr::rename(!!(index_name) := index_new)
+        dplyr::rename(dplyr::summarise_all(tsbl, {{ .f }}), !!(index_name) := index_new)
+
+        # tsbl %>%
+        #     dplyr::summarise_all({{ .f }}) %>%
+        #     dplyr::rename(!!(index_name) := index_new)
     }
 
 
@@ -52,33 +54,22 @@ correct_frequency <-
         if (frequency(tsbl) != 7) stop("correct_frequency currently supports tsibbles reporting daily frequency")
 
         tally_test <- function(tsbl) {
-            tsbl %>%
-                dplyr::tally() %>%
-                dplyr::pull(n) %>%
-                all(. == 1)
+            all(dplyr::pull((dplyr::tally(tsbl)), n) == 1)
+            # tsbl %>%
+            #     dplyr::tally() %>%
+            #     dplyr::pull(n) %>%
+            #     all(. == 1)
         }
 
         tsbl <- tsibble::group_by_key(tsbl)
 
-        if (
-            tsibble::index_by(tsbl, year = ~ lubridate::year(.)) %>% dplyr::tally()
-            tally_test()
-        ) {
+        if (tally_test(tsibble::index_by(tsbl, year = ~ lubridate::year(.)))) {
             tsbl <- change_frequency(tsbl, freq = "year")
-        } else if (
-            tsibble::index_by(tsbl, year_qtr = ~ tsibble::yearquarter(.)) %>%
-            tally_test()
-        ) {
+        } else if (tally_test(tsibble::index_by(tsbl, year_qtr = ~ tsibble::yearquarter(.)))) {
             tsbl <- change_frequency(tsbl, freq = "quarterly")
-        } else if (
-            tsibble::index_by(tsbl, year_month = ~ tsibble::yearmonth(.)) %>%
-            tally_test()
-        ) {
+        } else if (tally_test(tsibble::index_by(tsbl, year_month = ~ tsibble::yearmonth(.)))) {
             tsbl <- change_frequency(tsbl, freq = "monthly")
-        } else if (
-            tsibble::index_by(tsbl, year_week = ~ tsibble::yearweek(.)) %>%
-            tally_test()
-        ) {
+        } else if (tally_test(tsibble::index_by(tsbl, year_week = ~ tsibble::yearweek(.)))) {
             tsbl <- change_frequency(tsbl, freq = "weekly")
         }
 
@@ -97,8 +88,5 @@ correct_frequency <-
 clean_tsbl <-
     function(tsbl) {
         if (!tsibble::is_tsibble(tsbl)) stop("input must be a tsibble (of class 'tbl_ts')")
-
-        tsbl %>%
-            ungroup() %>%
-            fix_tsibble_frequency_automatically()
+        ungroup(fix_tsibble_frequency_automatically(tsbl))
     }
