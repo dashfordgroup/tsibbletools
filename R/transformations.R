@@ -55,6 +55,8 @@ remove_outliers <-
                                .outlier = ifelse(xts_data == .clean, FALSE, TRUE) %>% as.logical())
                 }
 
+            library(dplyr)
+
             tbl_nested <-
                 tsbl %>%
                 tsibble::group_by_key() %>%
@@ -115,6 +117,7 @@ impute_values <-
         seasonal_splitting = FALSE) {
 
         method <- match.arg(method)
+        library(dplyr)
 
         add_inputed_value <-
             function(tsbl) {
