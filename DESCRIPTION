@@ -22,14 +22,20 @@ Imports:
     anytime (>= 0.3.1),
     dplyr (>= 0.8.1),
     ellipsis (>= 0.3.0),
+    fable (>= 0.1.2),
+    fabletools (>= 0.1.2),
+    feasts (>= 0.1.2),
+    forecast,
+    imputeTS,
     lifecycle,
     lubridate (>= 1.7.0),
     purrr (>= 0.2.3),
     R6,
     rlang (>= 0.4.2),
     tibble (>= 2.0.1),
-    tsibble (>= 0.8.6),
     tidyselect (>= 1.0.0),
+    tsbox,
+    tsibble (>= 0.8.6),
     vctrs (>= 0.2.2)
 Suggests: 
     covr,
@@ -42,7 +48,7 @@ Suggests:
     rmarkdown,
     scales (>= 1.1.0),
     spelling,
-    testthat,
+    testthat (>= 2.1.0),
     tidyr (>= 1.0.0),
     timeDate
 VignetteBuilder: 
@@ -57,4 +63,3 @@ Language: en-GB
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.0.2
-
