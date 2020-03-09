@@ -5,6 +5,9 @@
 #' @param .f summary function
 #'
 #' @return tsibble
+#' @importFrom dplyr %>%
+#' @importFrom rlang :=
+#' @importFrom rlang !!
 #' @export
 #'
 #' @examples
@@ -12,31 +15,55 @@ change_frequency <-
     function(
         tsbl,
         freq = c("daily", "weekly", "monthly", "quarterly", "yearly"),
+        rename_index = TRUE,
         .f = sum
     ) {
+        library(rlang)
         freq <- match.arg(freq)
 
-        if (!tsibble::is_tsibble(tsbl)) stop("input must be a tsibble (of class 'tbl_ts')")
-
-        index_name <- tsibble::index_var(tsbl)
-
-        if (freq == "daily") {
-            tsbl <- tsibble::index_by(tsbl, index_new = ~ lubridate::date(.))
-        } else if (freq == "weekly") {
-            tsbl <- tsibble::index_by(tsbl, index_new = ~ tsibble::yearweek(.))
-        } else if (freq == "monthly") {
-            tsbl <- tsibble::index_by(tsbl, index_new = ~ tsibble::yearmonth(.))
-        } else if (freq == "quarterly") {
-            tsbl <- tsibble::index_by(tsbl, index_new = ~ tsibble::yearquarter(.))
-        } else if (freq == "yearly") {
-            tsbl <- tsibble::index_by(tsbl, index_new = ~ lubridate::year(.))
+        if (!tsibble::is_tsibble(tsbl)) {
+            stop("input must be a tsibble (of class 'tbl_ts')")
+        }
+        if (length(tsibble::index_var(tsbl)) > 1) {
+            stop("change_frequency only works with tsibbles with one index variable")
         }
 
-        dplyr::rename(dplyr::summarise_all(tsbl, {{ .f }}), tsibble::group_by_key(!!(index_name) := index_new))
+        if (!rename_index) {
+            index_name <- tsibble::index_var(tsbl)
+        }
 
-        # tsbl %>%
-        #     dplyr::summarise_all({{ .f }}) %>%
-        #     dplyr::rename(!!(index_name) := index_new)
+        colnames(tsbl)[which(colnames(tsbl) == tsibble::index_var(tsbl))] <- "index"
+        tsbl <- tsibble::update_tsibble(tsbl, index = index)
+
+        if (freq == "daily") {
+            tsbl <- tsibble::index_by(tsbl, Date = ~ lubridate::date(.))
+        } else if (freq == "weekly") {
+            tsbl <- tsibble::index_by(tsbl, Week = ~ tsibble::yearweek(.))
+        } else if (freq == "monthly") {
+            tsbl <- tsibble::index_by(tsbl, Month = ~ tsibble::yearmonth(.))
+        } else if (freq == "quarterly") {
+            tsbl <- tsibble::index_by(tsbl, Quarter = ~ tsibble::yearquarter(.))
+        } else if (freq == "yearly") {
+            tsbl <- tsibble::index_by(tsbl, Year = ~ lubridate::year(.))
+        }
+
+        tsbl <-
+            tsbl %>%
+            tsibble::update_tsibble(index = tsibble::index2_var(tsbl)) %>%
+            dplyr::select(-index) %>%
+            tsibble::group_by_key() %>%
+            dplyr::summarise_all(dplyr::across(tsibble::measured_vars(.)), {{ .f }}) %>%
+            tsibble::as_tsibble(
+                key = tsibble::key_vars(tsbl),
+                index = tsibble::index2_var(tsbl)
+            ) %>%
+            dplyr::ungroup()
+
+        if (!rename_index) {
+            tsbl <- dplyr::rename(tsbl, !!(index_name) := tsibble::index(tsbl))
+        }
+
+        return(tsbl)
     }
 
 
@@ -61,6 +88,7 @@ correct_frequency <-
             #     all(. == 1)
         }
 
+        grouping_keys <-
         tsbl <- tsibble::group_by_key(tsbl)
 
         if (tally_test(tsibble::index_by(tsbl, year = ~ lubridate::year(.)))) {
@@ -73,7 +101,7 @@ correct_frequency <-
             tsbl <- change_frequency(tsbl, freq = "weekly")
         }
 
-        ungroup(tsbl)
+        dplyr::ungroup(tsbl)
     }
 
 
@@ -88,5 +116,5 @@ correct_frequency <-
 clean_tsbl <-
     function(tsbl) {
         if (!tsibble::is_tsibble(tsbl)) stop("input must be a tsibble (of class 'tbl_ts')")
-        ungroup(fix_tsibble_frequency_automatically(tsbl))
+        dplyr::ungroup(correct_frequency(tsbl))
     }
