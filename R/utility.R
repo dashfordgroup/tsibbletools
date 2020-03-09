@@ -8,7 +8,8 @@
 #'
 #' @examples
 stash <-
-    function(.data, name) {
+    function(.data, name = NULL) {
+        if (is.null(name)) name <- "tmp"
         do.call("<<-",list(x = rlang::as_string(rlang::ensym(name)), value = .data))
         .data
     }
