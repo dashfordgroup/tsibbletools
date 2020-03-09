@@ -7,6 +7,7 @@
 change_frequency(
   tsbl,
   freq = c("daily", "weekly", "monthly", "quarterly", "yearly"),
+  rename_index = TRUE,
   .f = sum
 )
 }
