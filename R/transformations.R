@@ -10,16 +10,20 @@
 add_decomposition <-
     function(tsbl, long = FALSE) {
         if (!"tbl_ts" %in% class(tsbl)) {
-            rlang::abort("add_decomp_components only works on tsibbles")
+            rlang::abort("add_decomposition only works on tsibbles.")
         }
-        obs_per_season <- frequency(tsbl)
+        if (length(tsibble::measured_vars(tsbl)) > 1) {
+            rlang::abort("add_decomposition only works with a single measured variable.")
+        }
+        obs_per_season <- stats::frequency(tsbl)
+        measure_name <- tsibble::measured_vars(tsbl)
 
         tsbl <-
             dplyr::select(
                 fabletools::components(
                     fabletools::model(
                         tsbl,
-                        feasts::STL(value, robust = TRUE))),
+                        feasts::STL(!!(measure_name), robust = TRUE))),
                 -.model)
         component_names <- names(tsbl)[which(!names(tsbl) %in% c("index", "value", tsibble::key_vars(tsbl)))]
         names(tsbl)[which(names(tsbl) %in% component_names)] <- paste0(".", component_names)
