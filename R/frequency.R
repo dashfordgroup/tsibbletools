@@ -32,7 +32,8 @@ change_frequency <-
             tsbl <- tsibble::index_by(tsbl, index_new = ~ lubridate::year(.))
         }
 
-        dplyr::rename(dplyr::summarise_all(tsbl, {{ .f }}), tsibble::group_by_key(!!(index_name) := index_new))
+        tsibble::group_by_key(dplyr::rename(dplyr::summarise_if(tsbl, is.numeric, {{ .f }}), !!sym(index_name) := index_new))
+
 
         # tsbl %>%
         #     dplyr::summarise_all({{ .f }}) %>%
@@ -88,5 +89,5 @@ correct_frequency <-
 clean_tsbl <-
     function(tsbl) {
         if (!tsibble::is_tsibble(tsbl)) stop("input must be a tsibble (of class 'tbl_ts')")
-        ungroup(fix_tsibble_frequency_automatically(tsbl))
+        ungroup(correct_frequency(tsbl))
     }
