@@ -8,29 +8,44 @@
 #'
 #' @examples
 add_decomposition <-
-    function(tsbl, long = FALSE) {
+    function(tsbl, .vars, ..., long = FALSE) {
         if (!"tbl_ts" %in% class(tsbl)) {
             rlang::abort("add_decomp_components only works on tsibbles")
         }
-        obs_per_season <- frequency(tsbl)
 
-        tsbl <-
-            dplyr::select(
-                fabletools::components(
-                    fabletools::model(
-                        tsbl,
-                        feasts::STL(value, robust = TRUE))),
-                -.model)
-        component_names <- names(tsbl)[which(!names(tsbl) %in% c("index", "value", tsibble::key_vars(tsbl)))]
-        names(tsbl)[which(names(tsbl) %in% component_names)] <- paste0(".", component_names)
+        indx_var <- tsibble::index_var(tsbl)
+        key_var <- tsibble::key_vars(tsbl)
+
+        obs_per_season <- frequency(tsbl)
+        .var_list <- list(.vars, ...)
+
+
+        mod_sel <- function(tsbl, .var, label){
+            tsbl <- fabletools::components(fabletools::model(tsbl, feasts::STL({{.var}}, robust = TRUE)))
+            component_names <- names(tsbl)[which(!names(tsbl) %in% c(tsibble::index_var(tsbl), label, tsibble::key_vars(tsbl)))]
+            names(tsbl)[which(names(tsbl) %in% component_names)] <- paste0(".", component_names, '_', label)
+            tsbl
+        }
+
+        res_lst <- list()
+        for(i in 1:length(.var_list)){
+            sym_item <- sym(.var_list[[i]])
+            res_lst[[i]] <- tibble::as_tibble(mod_sel(tsbl,!!sym_item, .var_list[[i]]))
+        }
+
+        res_tbl <- res_lst[[1]]
+        for(i in 2:length(res_lst)){
+            res_tbl <- left_join(res_tbl, res_lst[[i]])
+        }
+
+        res_tsbl <- tsibble::as_tsibble(res_tbl,index = tsibble::index_var(tsbl), key = tsibble::key_vars(tsbl))
 
         if (long) {
-            clean_tsbl(pivot_tsbl_measures_longer(tsbl, key_name = "decomp_key"))
+            clean_tsbl(pivot_tsbl_measures_longer(res_tsbl, key_name = "decomp_key"))
         } else {
-            clean_tsbl(tsbl)
+            clean_tsbl(res_tsbl)
         }
     }
-
 
 #' Add Series without Outliers
 #'
